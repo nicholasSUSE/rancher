@@ -333,10 +333,10 @@ func (rb *RBTestSuite) ValidateAddCMAsProjectOwner() {
 }
 
 func (rb *RBTestSuite) ValidateAddPOsAsProjectOwner() {
-	//Check NO project is associated with the user
+	//Check NO project is associated with the client
 	userGetProjectEmpty, err := projects.GetProjectList(rb.additionalUserClient, rb.cluster.ID)
 	require.NoError(rb.T(), err)
-	assert.Equal(rb.T(), 1, len(userGetProjectEmpty.Data))
+	assert.Equal(rb.T(), 0, len(userGetProjectEmpty.Data))
 
 	log.Info("Additional Testcase4 - Validating if Project Owner can add another Project Owner ")
 	//Additional test4 validate if member with role Project Owner can add a project owner
@@ -357,7 +357,7 @@ func (rb *RBTestSuite) ValidateAddPOsAsProjectOwner() {
 	//Validated user is removed from the project
 	userProjectEmptyAfterRemoval, err := projects.GetProjectList(rb.additionalUserClient, rb.cluster.ID)
 	require.NoError(rb.T(), err)
-	assert.Equal(rb.T(), 1, len(userProjectEmptyAfterRemoval.Data))
+	assert.Equal(rb.T(), 0, len(userProjectEmptyAfterRemoval.Data))
 }
 
 func (rb *RBTestSuite) ValidateAddMPMsCannotElevate() {
