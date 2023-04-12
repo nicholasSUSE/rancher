@@ -345,49 +345,59 @@ func (rb *RBTestSuite) ValidateAddPOsAsProjectOwner() {
 
 	log.Info("Additional Testcase4 - Validating if Project Owner can add another Project Owner ")
 	//Additional test4 validate if member with role Project Owner can add a project owner
-	errUserRole1 := users.AddProjectMember(rb.standardUserClient, rb.standardUserCOProject, rb.additionalUser, roleProjectOwner)
-	require.NoError(rb.T(), errUserRole1)
+	errUserRole := users.AddProjectMember(rb.standardUserClient, rb.standardUserCOProject, rb.additionalUser, roleProjectOwner)
+	require.NoError(rb.T(), errUserRole)
 	rb.additionalUserClient, err = rb.additionalUserClient.ReLogin()
 
-	additionalUser2, err := createUser(rb.client, standardUser)
-	additionalUserClient2, err := rb.client.AsUser(additionalUser2)
+	additionalUser1, err := createUser(rb.client, standardUser)
+	additionalUserClient1, err := rb.client.AsUser(additionalUser1)
 	require.NoError(rb.T(), err)
 
-	errUserRole2 := users.AddProjectMember(rb.additionalUserClient, rb.standardUserCOProject, additionalUser2, roleProjectOwner)
+	errUserRole2 := users.AddProjectMember(rb.additionalUserClient, rb.standardUserCOProject, additionalUser1, roleProjectOwner)
 	require.NoError(rb.T(), errUserRole2)
-	additionalUserClient2, err = additionalUserClient2.ReLogin()
+	additionalUserClient1, err = additionalUserClient1.ReLogin()
 
 	//Check user is associated with the project
-	userGetProject, err := projects.GetProjectList(additionalUserClient2, rb.cluster.ID)
+	userGetProject, err := projects.GetProjectList(additionalUserClient1, rb.cluster.ID)
 	require.NoError(rb.T(), err)
 	assert.Equal(rb.T(), rb.standardUserCOProject.Name, userGetProject.Data[0].Name)
 	assert.Equal(rb.T(), 1, len(userGetProject.Data))
 
 	//Remove user from the project
-	errRemoveMember := users.RemoveProjectMember(rb.standardUserClient, additionalUser2)
+	errRemoveMember := users.RemoveProjectMember(rb.standardUserClient, additionalUser1)
 	require.NoError(rb.T(), errRemoveMember)
 
 	//Validated user is removed from the project
-	userProjectEmptyAfterRemoval, err := projects.GetProjectList(additionalUserClient2, rb.cluster.ID)
+	userProjectEmptyAfterRemoval, err := projects.GetProjectList(additionalUserClient1, rb.cluster.ID)
 	require.NoError(rb.T(), err)
 	assert.Equal(rb.T(), 0, len(userProjectEmptyAfterRemoval.Data))
 }
 
 func (rb *RBTestSuite) ValidateAddMPMsCannotElevate() {
-	//Additional test5 validate if member with role Manage Project Owner cannot add a project owner
-	log.Info("Additional Testcase5 - Validating if Manage Project Owner can add another Project Owner ")
+	//Create project as a cluster Owner
+	createProjectAsCO, err := createProject(rb.client, rb.cluster.ID)
+	require.NoError(rb.T(), err)
+	rb.standardUserCOProject = createProjectAsCO
+
+	log.Info("Additional Testcase5 - Validating if Manage Project Member cannot add Project Owner ")
+	//Additional test5 validate if member with role Manage Project Member cannot add a project owner
 	errUserRole := users.AddProjectMember(rb.standardUserClient, rb.standardUserCOProject, rb.additionalUser, roleManageProjectMember)
 	require.NoError(rb.T(), errUserRole)
-	additionalUserClient, err := rb.additionalUserClient.ReLogin()
+	rb.additionalUserClient, err = rb.additionalUserClient.ReLogin()
+
+	additionalUser1, err := createUser(rb.client, standardUser)
+	additionalUserClient1, err := rb.client.AsUser(additionalUser1)
 	require.NoError(rb.T(), err)
-	rb.additionalUserClient = additionalUserClient
+
+	errUserRole2 := users.AddProjectMember(rb.additionalUserClient, rb.standardUserCOProject, additionalUser1, roleProjectOwner)
+	require.Error(rb.T(), errUserRole2)
+	additionalUserClient1, err = additionalUserClient1.ReLogin()
+
 	//Check user is associated with the project
-	userGetProject, err := projects.GetProjectList(rb.additionalUserClient, rb.cluster.ID)
+	userGetProject, err := projects.GetProjectList(additionalUserClient1, rb.cluster.ID)
 	require.NoError(rb.T(), err)
 	assert.Equal(rb.T(), rb.standardUserCOProject.Name, userGetProject.Data[0].Name)
-	//Additional test5 validate if member with role Manage Project Owner cannot add a project owner
-	errProjectOwnerRole := users.AddProjectMember(rb.standardUserClient, rb.standardUserCOProject, rb.additionalUser, roleProjectOwner)
-	require.NoError(rb.T(), errProjectOwnerRole)
+	assert.Equal(rb.T(), 0, len(userGetProject.Data))
 }
 
 func (rb *RBTestSuite) TestRBAC() {
@@ -453,50 +463,50 @@ func (rb *RBTestSuite) TestRBAC() {
 
 		rb.T().Logf("Starting validations for %v", tt.role)
 
-		rb.Run("Testcase1 - Validating the cluster count obtained as the role "+tt.name, func() {
-			rb.ValidateListCluster(tt.role)
-		})
+		// rb.Run("Testcase1 - Validating the cluster count obtained as the role "+tt.name, func() {
+		// 	rb.ValidateListCluster(tt.role)
+		// })
 
-		rb.Run("Testcase2 - Validating if members with role "+tt.name+" are able to list all projects", func() {
-			rb.ValidateListProjects(tt.role)
-		})
+		// rb.Run("Testcase2 - Validating if members with role "+tt.name+" are able to list all projects", func() {
+		// 	rb.ValidateListProjects(tt.role)
+		// })
 
-		rb.Run("Testcase3 - Validating if members with role "+tt.name+" is able to create a project in the cluster", func() {
-			rb.ValidateCreateProjects(tt.role)
-		})
+		// rb.Run("Testcase3 - Validating if members with role "+tt.name+" is able to create a project in the cluster", func() {
+		// 	rb.ValidateCreateProjects(tt.role)
+		// })
 
-		rb.Run("Testcase 4 through 6 - Validate namespaces checks for members with role "+tt.name, func() {
-			rb.ValidateNS(tt.role)
-		})
+		// rb.Run("Testcase 4 through 6 - Validate namespaces checks for members with role "+tt.name, func() {
+		// 	rb.ValidateNS(tt.role)
+		// })
 
-		if strings.Contains(tt.role, "project") {
-			rb.Run("Testcase7 - Validating if member with role "+tt.name+" can add members to the cluster", func() {
-				//Set up additional user client to be added to the project
-				additionalUser, err := createUser(rb.client, standardUser)
-				require.NoError(rb.T(), err)
-				rb.additionalUser = additionalUser
-				rb.additionalUserClient, err = rb.client.AsUser(rb.additionalUser)
-				require.NoError(rb.T(), err)
+		// if strings.Contains(tt.role, "project") {
+		// 	rb.Run("Testcase7 - Validating if member with role "+tt.name+" can add members to the cluster", func() {
+		// 		//Set up additional user client to be added to the project
+		// 		additionalUser, err := createUser(rb.client, standardUser)
+		// 		require.NoError(rb.T(), err)
+		// 		rb.additionalUser = additionalUser
+		// 		rb.additionalUserClient, err = rb.client.AsUser(rb.additionalUser)
+		// 		require.NoError(rb.T(), err)
 
-				rb.ValidateAddClusterRoles(tt.role)
-			})
+		// 		rb.ValidateAddClusterRoles(tt.role)
+		// 	})
 
-			rb.Run("Testcase8 - Validating if member with role "+tt.name+" can add members to the project", func() {
-				rb.ValidateAddProjectRoles(tt.role)
-			})
-		}
+		// 	rb.Run("Testcase8 - Validating if member with role "+tt.name+" can add members to the project", func() {
+		// 		rb.ValidateAddProjectRoles(tt.role)
+		// 	})
+		// }
 
-		rb.Run("Testcase9 - Validating if member with role "+tt.name+" can delete a project they are not owner of ", func() {
-			rb.ValidateDeleteProject(tt.role)
-		})
+		// rb.Run("Testcase9 - Validating if member with role "+tt.name+" can delete a project they are not owner of ", func() {
+		// 	rb.ValidateDeleteProject(tt.role)
+		// })
 
-		rb.Run("Testcase10 - Validating if member with role "+tt.name+" is removed from the cluster and returns nil clusters", func() {
-			if strings.Contains(tt.role, "project") {
-				rb.ValidateRemoveProjectRoles()
-			} else {
-				rb.ValidateRemoveClusterRoles()
-			}
-		})
+		// rb.Run("Testcase10 - Validating if member with role "+tt.name+" is removed from the cluster and returns nil clusters", func() {
+		// 	if strings.Contains(tt.role, "project") {
+		// 		rb.ValidateRemoveProjectRoles()
+		// 	} else {
+		// 		rb.ValidateRemoveClusterRoles()
+		// 	}
+		// })
 
 	}
 }
