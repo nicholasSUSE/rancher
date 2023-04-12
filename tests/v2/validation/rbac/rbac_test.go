@@ -396,7 +396,6 @@ func (rb *RBTestSuite) ValidateAddMPMsCannotElevate() {
 	//Check user is associated with the project
 	userGetProject, err := projects.GetProjectList(additionalUserClient1, rb.cluster.ID)
 	require.NoError(rb.T(), err)
-	assert.Equal(rb.T(), rb.standardUserCOProject.Name, userGetProject.Data[0].Name)
 	assert.Equal(rb.T(), 0, len(userGetProject.Data))
 }
 
@@ -463,50 +462,50 @@ func (rb *RBTestSuite) TestRBAC() {
 
 		rb.T().Logf("Starting validations for %v", tt.role)
 
-		// rb.Run("Testcase1 - Validating the cluster count obtained as the role "+tt.name, func() {
-		// 	rb.ValidateListCluster(tt.role)
-		// })
+		rb.Run("Testcase1 - Validating the cluster count obtained as the role "+tt.name, func() {
+			rb.ValidateListCluster(tt.role)
+		})
 
-		// rb.Run("Testcase2 - Validating if members with role "+tt.name+" are able to list all projects", func() {
-		// 	rb.ValidateListProjects(tt.role)
-		// })
+		rb.Run("Testcase2 - Validating if members with role "+tt.name+" are able to list all projects", func() {
+			rb.ValidateListProjects(tt.role)
+		})
 
-		// rb.Run("Testcase3 - Validating if members with role "+tt.name+" is able to create a project in the cluster", func() {
-		// 	rb.ValidateCreateProjects(tt.role)
-		// })
+		rb.Run("Testcase3 - Validating if members with role "+tt.name+" is able to create a project in the cluster", func() {
+			rb.ValidateCreateProjects(tt.role)
+		})
 
-		// rb.Run("Testcase 4 through 6 - Validate namespaces checks for members with role "+tt.name, func() {
-		// 	rb.ValidateNS(tt.role)
-		// })
+		rb.Run("Testcase 4 through 6 - Validate namespaces checks for members with role "+tt.name, func() {
+			rb.ValidateNS(tt.role)
+		})
 
-		// if strings.Contains(tt.role, "project") {
-		// 	rb.Run("Testcase7 - Validating if member with role "+tt.name+" can add members to the cluster", func() {
-		// 		//Set up additional user client to be added to the project
-		// 		additionalUser, err := createUser(rb.client, standardUser)
-		// 		require.NoError(rb.T(), err)
-		// 		rb.additionalUser = additionalUser
-		// 		rb.additionalUserClient, err = rb.client.AsUser(rb.additionalUser)
-		// 		require.NoError(rb.T(), err)
+		if strings.Contains(tt.role, "project") {
+			rb.Run("Testcase7 - Validating if member with role "+tt.name+" can add members to the cluster", func() {
+				//Set up additional user client to be added to the project
+				additionalUser, err := createUser(rb.client, standardUser)
+				require.NoError(rb.T(), err)
+				rb.additionalUser = additionalUser
+				rb.additionalUserClient, err = rb.client.AsUser(rb.additionalUser)
+				require.NoError(rb.T(), err)
 
-		// 		rb.ValidateAddClusterRoles(tt.role)
-		// 	})
+				rb.ValidateAddClusterRoles(tt.role)
+			})
 
-		// 	rb.Run("Testcase8 - Validating if member with role "+tt.name+" can add members to the project", func() {
-		// 		rb.ValidateAddProjectRoles(tt.role)
-		// 	})
-		// }
+			rb.Run("Testcase8 - Validating if member with role "+tt.name+" can add members to the project", func() {
+				rb.ValidateAddProjectRoles(tt.role)
+			})
+		}
 
-		// rb.Run("Testcase9 - Validating if member with role "+tt.name+" can delete a project they are not owner of ", func() {
-		// 	rb.ValidateDeleteProject(tt.role)
-		// })
+		rb.Run("Testcase9 - Validating if member with role "+tt.name+" can delete a project they are not owner of ", func() {
+			rb.ValidateDeleteProject(tt.role)
+		})
 
-		// rb.Run("Testcase10 - Validating if member with role "+tt.name+" is removed from the cluster and returns nil clusters", func() {
-		// 	if strings.Contains(tt.role, "project") {
-		// 		rb.ValidateRemoveProjectRoles()
-		// 	} else {
-		// 		rb.ValidateRemoveClusterRoles()
-		// 	}
-		// })
+		rb.Run("Testcase10 - Validating if member with role "+tt.name+" is removed from the cluster and returns nil clusters", func() {
+			if strings.Contains(tt.role, "project") {
+				rb.ValidateRemoveProjectRoles()
+			} else {
+				rb.ValidateRemoveClusterRoles()
+			}
+		})
 
 	}
 }
@@ -538,20 +537,20 @@ func (rb *RBTestSuite) TestRBACAdditional() {
 		require.NoError(rb.T(), err)
 	})
 
-	// rb.Run("Additional testcase1 - Validating if member with role "+roleOwner+" can add another standard user as a project owner", func() {
-	// 	rb.ValidateAddStdUserAsProjectOwner()
+	rb.Run("Additional testcase1 - Validating if member with role "+roleOwner+" can add another standard user as a project owner", func() {
+		rb.ValidateAddStdUserAsProjectOwner()
 
-	// })
+	})
 
-	// rb.Run("Additional testcase2 - Validating if member with role "+roleOwner+" can add another standard user as a cluster owner", func() {
-	// 	rb.ValidateAddMemberAsClusterRoles()
+	rb.Run("Additional testcase2 - Validating if member with role "+roleOwner+" can add another standard user as a cluster owner", func() {
+		rb.ValidateAddMemberAsClusterRoles()
 
-	// })
+	})
 
-	// rb.Run("Additional testcase3 - Validating if member with role "+roleOwner+" can add a cluster member as a project owner", func() {
-	// 	rb.ValidateAddCMAsProjectOwner()
+	rb.Run("Additional testcase3 - Validating if member with role "+roleOwner+" can add a cluster member as a project owner", func() {
+		rb.ValidateAddCMAsProjectOwner()
 
-	// })
+	})
 
 	rb.Run("Additional testcase4 - Validating if member with role "+roleProjectOwner+" can add a project owner", func() {
 		rb.ValidateAddPOsAsProjectOwner()
