@@ -6,6 +6,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// GetSecret returns the Secret for the specific namespace and client
+// If there is no ClientSecret, returns nil
 func GetSecret(secrets corev1controllers.SecretCache, repoSpec *v1.RepoSpec, repoNamespace string) (*corev1.Secret, error) {
 	if repoSpec.ClientSecret == nil {
 		return nil, nil
