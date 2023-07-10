@@ -10,8 +10,6 @@ It includes:
 The package is primarily used to create an index file of a Helm repository (represented as a ClusterRepo custom resource), retrieve chart information and chart icons from the index file, and provide these functionalities with thread safety.
 
 It includes a Manager struct that provides a set of functionalities to interact with Helm repositories. It uses clientsets provided by the Wrangler library to interact with the Kubernetes API and quickly fetch instances of ConfigMaps, Secrets, and ClusterRepos.
-
-The package is designed to be used by developers who are working with Helm charts in a Kubernetes environment and who need to interact with Helm repositories, retrieve chart information and chart icons, and manage Helm chart dependencies.
 */
 package content
 
@@ -62,7 +60,7 @@ type Manager struct {
 // indexCache - used to cache helm chart indexes
 type indexCache struct {
 	index    *repo.IndexFile // Pointer to the helm chart index
-	revision string          // The revision number of the index in the Kubernetes API server
+	revision string          // The revision number of the configmap that holds the index in the Kubernetes API server
 }
 
 // repoDef is used to represent a Helm chart repository.
@@ -88,12 +86,11 @@ func NewManager(
 	}
 }
 
-// Index (thread-safe) retrieves the Helm repository information for a specific namespace and name.
-// fetches the related ConfigMap, kubernetes version and the caching of the index file.
-// If the skipFilter is true, the function does not filter any results.
+// Index retrieves the Helm repository information from the configmap of a specific namespace and name.
+// If the skipFilter is true, the function does not filter the indexfile.
 // If the index file is not cached or if it has been updated,
-// the function reads the ConfigMap and unmarshals the data into an index file.
-// Otherwise it will return the IndexFile
+// the function reads the ConfigMap and unmarshals the data into an index file and updates the cache.
+// Otherwise it will return the cached IndexFile.
 func (c *Manager) Index(namespace, name string, skipFilter bool) (*repo.IndexFile, error) {
 	r, err := c.getRepo(namespace, name)
 	if err != nil {
@@ -159,7 +156,7 @@ func (c *Manager) Index(namespace, name string, skipFilter bool) (*repo.IndexFil
 // Icon Returns an io.ReadCloser and the icon's MIME type for the chart.
 //
 // If the chart's icon is not an HTTP or HTTPS URL, retrieves the icon from the repo's Git repository.
-// Otherwise, retrieves the icon via HTTP from the chart's URL and returns it as an io.ReadCloser with the proper Secret.
+// Otherwise, retrieves the icon via HTTP from the chart's URL and returns it as an io.ReadCloser.
 func (c *Manager) Icon(namespace, name, chartName, version string) (io.ReadCloser, string, error) {
 	index, err := c.Index(namespace, name, true)
 	if err != nil {
@@ -188,18 +185,12 @@ func (c *Manager) Icon(namespace, name, chartName, version string) (io.ReadClose
 	return helmhttp.Icon(secret, repo.status.URL, repo.spec.CABundle, repo.spec.InsecureSkipTLSverify, repo.spec.DisableSameOriginCheck, chart)
 }
 
-// Chart retrieves a specific Helm chart from a Helm repository.
+// Chart retrieves a tar of a specific Helm chart from a Helm repository by
+// retrieving the index file, fetches the helm chart and repository data.
 //
-// Retrieves the index file, fetches the helm chart and repository data.
-// Check's the commit status of the repository
-//
-// If the commit status of the repository is not an empty string,
-// Return the Chart through Git without secret
-//
-// If the commit status of the repository is an empty string,
-// it retrieves the secret associated with the repository
-//
-// The function returns an io.ReadCloser which represents the chart content.
+// If the commit status of the clusterrepo is not an empty string, the function
+// returns the tar of the chart from the git source, otherwise it returns from
+// helmclient.
 func (c *Manager) Chart(namespace, name, chartName, version string, skipFilter bool) (io.ReadCloser, error) {
 	// Get the index file of the Helm repo
 	index, err := c.Index(namespace, name, skipFilter)
@@ -237,7 +228,7 @@ func (c *Manager) Chart(namespace, name, chartName, version string, skipFilter b
 //
 // The function uses the Chart method to get the content of the Helm chart.
 // The Chart method is called with the skipFilter parameter hard-coded to true,
-// meaning that no filtering is applied to the results.
+// meaning that no filtering is applied to the index file.
 //
 // Once the chart content is retrieved, the function uses the InfoFromTarball method to extract detailed information.
 //
@@ -253,11 +244,7 @@ func (c *Manager) Info(namespace, name, chartName, version string) (*types.Chart
 	return helm.InfoFromTarball(chart)
 }
 
-// getRepo returns a cluster repository based on the name
-//
-// namespace should never be empty
-//
-// getRepo will get ClusterRepo struct defined for catalog.cattle.io, convert it to repoDef and return it
+// getRepo returns a repoDef struct constructed by fetching the clusterRepo custom resource based on the name given.
 func (c *Manager) getRepo(namespace, name string) (repoDef, error) {
 	if namespace == "" {
 		cr, err := c.clusterRepos.Get(name)
@@ -341,7 +328,7 @@ func (c *Manager) filterReleases(index *repo.IndexFile, k8sVersion *semver.Versi
 	// The method settings.IsRelease() checks two things:
 	// 1. If the server version does not contain the "head" substring. If "head" is present, it means the server is not a released version.
 	// 2. If the server version matches the releasePattern. A valid release version should start with "v" followed by a single digit, such as v1, v2, v3, etc.
-	// If the server is not a released version (settings.IsRelease() returns false) or if skipFilter is true, it returns the current index.
+	// If the server is not a released version (settings.IsRelease() returns false) or if skipFilter is true, it returns the unfiltered index.
 	if !settings.IsRelease() || skipFilter {
 		return index
 	}
