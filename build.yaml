@@ -5,6 +5,7 @@ defaultSccOperatorImage: rancher/scc-operator:v0.5.2
 # Notes: ClusterRepo asset and branch versions
 defaultAssetsImage: rancher/rancher-assets:v2.16-20260914T2041Z-dev
 chartDefaultBranch: dev-v2.16
+chartDefaultUrl: https://git.rancher.io/
 partnerChartDefaultBranch: main
 rke2ChartDefaultBranch: main
 # Charts Versions

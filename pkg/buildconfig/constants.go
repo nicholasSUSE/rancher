@@ -5,6 +5,7 @@ package buildconfig
 const (
 	ChartAuditLogImage        = "rancher/mirrored-bci-micro:16.0-15.11"
 	ChartDefaultBranch        = "dev-v2.16"
+	ChartDefaultUrl           = "https://git.rancher.io/"
 	DefaultAssetsImage        = "rancher/rancher-assets:v2.16-20260914T2041Z-dev"
 	DefaultSccOperatorImage   = "rancher/scc-operator:v0.5.2"
 	DefaultShellVersion       = "rancher/shell:v0.8.1"
