@@ -294,7 +294,7 @@ func isRancherRepo(namespace, name string, index *repo.IndexFile) bool {
 
 	for _, versions := range index.Entries {
 		for _, version := range versions {
-			if version.Annotations == nil || version.Annotations["catalog.cattle.io/certified"] != "rancher" {
+			if version == nil || version.Metadata == nil || version.Annotations == nil || version.Annotations["catalog.cattle.io/certified"] != "rancher" {
 				return false
 			}
 		}

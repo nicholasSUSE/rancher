@@ -845,6 +845,34 @@ func TestIsRancherRepo(t *testing.T) {
 			want: false,
 		},
 		{
+			name:      "nil chart version",
+			namespace: "",
+			repoName:  "test-repo",
+			index: &repo.IndexFile{
+				Entries: map[string]repo.ChartVersions{
+					"broken-chart": {
+						nil,
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name:      "chart with nil metadata",
+			namespace: "",
+			repoName:  "test-repo",
+			index: &repo.IndexFile{
+				Entries: map[string]repo.ChartVersions{
+					"broken-chart": {
+						&repo.ChartVersion{
+							Metadata: nil,
+						},
+					},
+				},
+			},
+			want: false,
+		},
+		{
 			name:      "nil index",
 			namespace: "",
 			repoName:  "test-repo",
