@@ -244,7 +244,7 @@ func (c *Manager) Chart(namespace, name, chartName, version string, skipFilter b
 			return git.Chart(namespace, name, repo.status.URL, chart)
 		}
 
-		if isRancherRepo(name) {
+		if isRancherRepo(namespace, name, index) {
 			localChart, err := git.Chart(namespace, name, repo.status.URL, withLocalAsset(chart))
 			if err == nil {
 				return localChart, nil
@@ -284,9 +284,23 @@ var rancherRepos = map[string]bool{
 	"rancher-rke2-charts":    true,
 }
 
-// isRancherRepo reports whether the ClusterRepo is one Rancher creates itself.
-func isRancherRepo(name string) bool {
-	return rancherRepos[name]
+// isRancherRepo reports whether all charts in the index have the Rancher certified annotation.
+// Returns true only if every chart version has the annotation "catalog.cattle.io/certified: rancher".
+// namespace and name identify the ClusterRepo for future caching.
+func isRancherRepo(namespace, name string, index *repo.IndexFile) bool {
+	if index == nil || len(index.Entries) == 0 {
+		return false
+	}
+
+	for _, versions := range index.Entries {
+		for _, version := range versions {
+			if version.Annotations == nil || version.Annotations["catalog.cattle.io/certified"] != "rancher" {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 // systemChartsRepo is the git-based ClusterRepo for rancher/charts that Rancher creates itself, see
