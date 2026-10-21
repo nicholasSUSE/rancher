@@ -32,8 +32,10 @@ func Icon(namespace, name, gitURL string, chartVersion *repo.ChartVersion) (io.R
 }
 
 func Chart(namespace, name, gitURL string, chartVersion *repo.ChartVersion) (io.ReadCloser, error) {
-	dir := RepoDir(namespace, name, gitURL)
+	return loadChart(RepoDir(namespace, name, gitURL), gitURL, chartVersion)
+}
 
+func loadChart(dir, gitURL string, chartVersion *repo.ChartVersion) (io.ReadCloser, error) {
 	if len(chartVersion.URLs) == 0 {
 		return nil, fmt.Errorf("failed to find chartName %s version %s: %w", chartVersion.Name, chartVersion.Version, validation.NotFound)
 	}

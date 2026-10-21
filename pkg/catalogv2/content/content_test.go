@@ -682,3 +682,121 @@ func deleteDir(dir string) error {
 	}
 	return nil
 }
+
+func TestWithRegistry(t *testing.T) {
+	chartVersion := func(urls ...string) *repo.ChartVersion {
+		return &repo.ChartVersion{
+			Metadata: &chart.Metadata{Name: "fleet", Version: "108.0.0+up0.14.0"},
+			URLs:     urls,
+		}
+	}
+
+	tests := []struct {
+		name     string
+		urls     []string
+		registry string
+		want     []string
+	}{
+		{
+			name:     "no system default registry",
+			urls:     []string{"oci://registry.rancher.com/rancher/charts/fleet:108.0.0"},
+			registry: "",
+			want:     []string{"oci://registry.rancher.com/rancher/charts/fleet:108.0.0"},
+		},
+		{
+			name:     "same registry",
+			urls:     []string{"oci://registry.rancher.com/rancher/charts/fleet:108.0.0"},
+			registry: "registry.rancher.com",
+			want:     []string{"oci://registry.rancher.com/rancher/charts/fleet:108.0.0"},
+		},
+		{
+			name:     "private registry",
+			urls:     []string{"oci://registry.rancher.com/rancher/charts/fleet:108.0.0"},
+			registry: "registry.example.com:5000",
+			want:     []string{"oci://registry.example.com:5000/rancher/charts/fleet:108.0.0"},
+		},
+		{
+			name:     "private registry with path prefix and trailing slash",
+			urls:     []string{"oci://registry.rancher.com/rancher/charts/fleet:108.0.0"},
+			registry: "registry.example.com/mirror/",
+			want:     []string{"oci://registry.example.com/mirror/rancher/charts/fleet:108.0.0"},
+		},
+		{
+			name:     "digest is kept",
+			urls:     []string{"oci://registry.rancher.com/rancher/charts/fleet:108.0.0@sha256:abc", "oci://other/fleet:108.0.0"},
+			registry: "registry.example.com",
+			want:     []string{"oci://registry.example.com/rancher/charts/fleet:108.0.0@sha256:abc", "oci://other/fleet:108.0.0"},
+		},
+		{
+			name:     "registry only URL",
+			urls:     []string{"oci://registry.rancher.com"},
+			registry: "registry.example.com",
+			want:     []string{"oci://registry.rancher.com"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			in := chartVersion(tt.urls...)
+			orig := append([]string(nil), in.URLs...)
+
+			got := withRegistry(in, tt.registry)
+
+			assert.Equal(t, tt.want, got.URLs)
+			assert.Equal(t, orig, in.URLs, "cached index entry must not be modified")
+		})
+	}
+}
+
+func TestIsOCIChart(t *testing.T) {
+	tests := []struct {
+		name     string
+		chartURL string
+		want     bool
+	}{
+		{name: "relative path", chartURL: "assets/fleet/fleet-108.0.0.tgz", want: false},
+		{name: "file URL", chartURL: "file://assets/fleet/fleet-108.0.0.tgz", want: false},
+		{name: "git repo URL", chartURL: "https://git.rancher.io/charts/assets/fleet/fleet-108.0.0.tgz", want: false},
+		{name: "other http URL", chartURL: "https://charts.example.com/fleet-108.0.0.tgz", want: false},
+		{name: "OCI URL", chartURL: "oci://registry.rancher.com/rancher/charts/fleet:108.0.0", want: true},
+		{name: "OCI URL with digest", chartURL: "oci://registry.rancher.com/rancher/charts/fleet:108.0.0@sha256:abc", want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isOCIChart(tt.chartURL))
+		})
+	}
+}
+
+func TestIsRancherRepo(t *testing.T) {
+	tests := []struct {
+		name string
+		repo string
+		want bool
+	}{
+		{name: "rancher charts", repo: "rancher-charts", want: true},
+		{name: "partner charts", repo: "rancher-partner-charts", want: true},
+		{name: "rke2 charts", repo: "rancher-rke2-charts", want: true},
+		{name: "customer repo", repo: "my-charts", want: false},
+		{name: "customer repo with rancher prefix", repo: "rancher-charts-fork", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isRancherRepo(tt.repo))
+		})
+	}
+}
+
+func TestWithLocalAsset(t *testing.T) {
+	in := &repo.ChartVersion{
+		Metadata: &chart.Metadata{Name: "fleet", Version: "108.0.0+up0.14.0"},
+		URLs:     []string{"oci://registry.rancher.com/rancher/charts/fleet:108.0.0-up0.14.0"},
+	}
+
+	got := withLocalAsset(in)
+
+	assert.Equal(t, []string{"file://assets/fleet/fleet-108.0.0+up0.14.0.tgz"}, got.URLs)
+	assert.Equal(t, []string{"oci://registry.rancher.com/rancher/charts/fleet:108.0.0-up0.14.0"}, in.URLs, "cached index entry must not be modified")
+}
