@@ -276,14 +276,6 @@ func (c *Manager) Chart(namespace, name, chartName, version string, skipFilter b
 	}
 }
 
-// rancherRepos are the git-based ClusterRepos Rancher creates itself, see pkg/data/dashboard/repo.go.
-// Only these look up OCI charts in their checkout before pulling them from the registry.
-var rancherRepos = map[string]bool{
-	"rancher-charts":         true,
-	"rancher-partner-charts": true,
-	"rancher-rke2-charts":    true,
-}
-
 // isRancherRepo reports whether all charts in the index have the Rancher certified annotation.
 // Returns true only if every chart version has the annotation "catalog.cattle.io/certified: rancher".
 // namespace and name identify the ClusterRepo for future caching.
