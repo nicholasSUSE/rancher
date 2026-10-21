@@ -771,20 +771,100 @@ func TestIsOCIChart(t *testing.T) {
 
 func TestIsRancherRepo(t *testing.T) {
 	tests := []struct {
-		name string
-		repo string
-		want bool
+		name      string
+		namespace string
+		repoName  string
+		index     *repo.IndexFile
+		want      bool
 	}{
-		{name: "rancher charts", repo: "rancher-charts", want: true},
-		{name: "partner charts", repo: "rancher-partner-charts", want: true},
-		{name: "rke2 charts", repo: "rancher-rke2-charts", want: true},
-		{name: "customer repo", repo: "my-charts", want: false},
-		{name: "customer repo with rancher prefix", repo: "rancher-charts-fork", want: false},
+		{
+			name:      "all charts certified rancher",
+			namespace: "",
+			repoName:  "rancher-charts",
+			index: &repo.IndexFile{
+				Entries: map[string]repo.ChartVersions{
+					"fleet": {
+						&repo.ChartVersion{
+							Metadata: &chart.Metadata{
+								Name:        "fleet",
+								Annotations: map[string]string{"catalog.cattle.io/certified": "rancher"},
+							},
+						},
+					},
+					"rancher-monitoring": {
+						&repo.ChartVersion{
+							Metadata: &chart.Metadata{
+								Name:        "rancher-monitoring",
+								Annotations: map[string]string{"catalog.cattle.io/certified": "rancher"},
+							},
+						},
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name:      "chart missing annotation",
+			namespace: "",
+			repoName:  "custom-charts",
+			index: &repo.IndexFile{
+				Entries: map[string]repo.ChartVersions{
+					"fleet": {
+						&repo.ChartVersion{
+							Metadata: &chart.Metadata{
+								Name:        "fleet",
+								Annotations: map[string]string{"catalog.cattle.io/certified": "rancher"},
+							},
+						},
+					},
+					"custom-chart": {
+						&repo.ChartVersion{
+							Metadata: &chart.Metadata{Name: "custom-chart"},
+						},
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name:      "chart certified partner not rancher",
+			namespace: "",
+			repoName:  "partner-charts",
+			index: &repo.IndexFile{
+				Entries: map[string]repo.ChartVersions{
+					"partner-app": {
+						&repo.ChartVersion{
+							Metadata: &chart.Metadata{
+								Name:        "partner-app",
+								Annotations: map[string]string{"catalog.cattle.io/certified": "partner"},
+							},
+						},
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name:      "nil index",
+			namespace: "",
+			repoName:  "test-repo",
+			index:     nil,
+			want:      false,
+		},
+		{
+			name:      "empty index",
+			namespace: "",
+			repoName:  "test-repo",
+			index: &repo.IndexFile{
+				Entries: map[string]repo.ChartVersions{},
+			},
+			want: false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, isRancherRepo(tt.repo))
+			assert.Equal(t, tt.want, isRancherRepo(tt.namespace, tt.repoName, tt.index))
 		})
 	}
 }
